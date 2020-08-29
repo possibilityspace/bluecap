@@ -8,11 +8,15 @@ using UnityEngine;
     any game in our design space. Remember, this is just one way to do it! 
 */
 
+//These are enums used for defining bits of the game. You'll see them used elsewhere.
 public enum Heading{UP, RIGHT, DOWN, LEFT};
 public enum Direction{LINE, ROW, COL, CARDINAL};
 public enum Player{CURRENT, OPPONENT, ANY};
 public enum TriggeredEffect {DELETE, FLIP, FALL};
 
+//This is a handy little class I make so I can quickly bundle two integers together in one object.
+//There's probably a nicer way of doing this in C#, this is just a quick solution.
+//A 'struct' is like a class but it has a few restrictions in exchange for taking up less memory.
 public struct Point{
     public int x; public int y;
     public Point(int _x, int _y){
@@ -20,8 +24,12 @@ public struct Point{
     }
 }
 
+//Finally, an answer to the question: what is a game?
 public class Game
 {
+    //This is a little variable that holds the score for this game. This is useful for algorithms
+    //that generate games, because they can remember what score this game got previously to avoid
+    //having to re-evaluate it. You can see this used in the Scrappy Game Generator.
     public float evaluatedScore = 0f;
 
     //Game data    
@@ -37,6 +45,7 @@ public class Game
     //1 = Player 1 win
     //2 = Player 2 win
     //3 = Draw
+    //This is nice because the player number is also the win flag.
     public int endStatus = 0;
     public const int END_STATUS_DRAW = 3;
 

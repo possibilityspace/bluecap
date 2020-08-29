@@ -17,5 +17,6 @@ public class PlayerPiece : MonoBehaviour
 
     public void PieceMoved(int tox, int toy){
         //todo
+        //huh guess i just left this one huh? that's cool. that happens.
     }
 }

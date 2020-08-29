@@ -6,6 +6,12 @@ using DG.Tweening;
 public class BoardManager : MonoBehaviour
 {
 
+    /*
+     * This class handles playing games in an interactive way, and provides some handy help
+     * for customising a game or quickly testing something. It's used in one of the example scenes.
+     * It's a little tangled, because it's quite a centrally important class.
+    */
+
     public enum AGENT_TYPE {MCTS, Greedy, Random};
 
     [Header("AI")]

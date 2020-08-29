@@ -12,8 +12,6 @@ public class BoardPiece : MonoBehaviour
     [HideInInspector]
     public int y;
 
-    //TODO: Click detection
-
     public void OnMouseEnter(){
 
     }

@@ -4,7 +4,9 @@ using UnityEngine;
 
 public class GameGeneration : MonoBehaviour
 {
-    
+
+    //In Unity, if you put a line like this in a file, above a field, it adds a little header to the Editor window.
+    //You can see it by clicking on any object that has the "Game Generation" component in a scene.
     [Header("Board Settings")]
     public int minBoardDimension = 3;
     public int maxBoardDimension = 6;
