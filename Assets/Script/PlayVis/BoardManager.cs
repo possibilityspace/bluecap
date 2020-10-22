@@ -184,7 +184,7 @@ LOSE MATCH LINE 3";
                 SetEndState();
             }
             else if(aiOpponent){
-                StartCoroutine("PauseForOpponent");
+                StartCoroutine(PauseForOpponent());
             }
         }
         else if(gameOver){
@@ -261,6 +261,7 @@ LOSE MATCH LINE 3";
         p.transform.position = new Vector3(x, y, 1);
 
         p.SetShape(player);
+        //GFEE.Instance.TriggerCustomEvent("AddPiece"+Player.id, gameObject, pos, direction);
     }
 
     //! Board update stuff
@@ -298,7 +299,6 @@ LOSE MATCH LINE 3";
             p.outlineSprite.color = playerTwoAccent;
         }
         p.SetShape(newPlayerCode);
-        
     }
 
 

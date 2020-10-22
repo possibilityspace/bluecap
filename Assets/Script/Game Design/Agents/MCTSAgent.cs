@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 public class MCTSAgent : BaseAgent
@@ -25,11 +26,21 @@ public class MCTSAgent : BaseAgent
 
     //More iterations = better search/better agent performance
     public int iterations = 100000;
-
-    public override bool TakeTurn(Game g){
+    
+    /// <summary>
+    /// Take a turn, but use no more than the allotted time limit.
+    /// </summary>
+    /// <param name="g">The game to play</param>
+    /// <param name="timeLimit">Time limit in seconds</param>
+    /// <returns>Returns whether we managed to take a turn or not.</returns>
+    public override bool TakeTurn(Game g, float timeLimit = 1f){
 
         bool wasInteractive = g.interactiveMode;
         g.interactiveMode = false;
+        
+        //NOTE: use timeLimit in addition to cutoff, if TapAction takes a lot of time for some reason.
+        var timer = Stopwatch.StartNew();
+        var timeLimitInMillis = timeLimit * 1000f;
 
         //Because we're going to be resetting the state a LOT, we just save our own copy here.
         GameState rootCopy = g.state.Copy();
@@ -43,6 +54,9 @@ public class MCTSAgent : BaseAgent
             //? Step zero: reset the game
             g.SetState(rootCopy.Copy(), 0);
 
+            //Check if the time is up!
+            if (timer.ElapsedMilliseconds > timeLimitInMillis) break;
+            
             //? Step one: descend the tree from the root
             Node current = root;
             while(current.firstChild != null){

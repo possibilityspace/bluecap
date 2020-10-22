@@ -1,9 +1,15 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 public class GameEvaluation : MonoBehaviour
 {
+    [Header("Allotted turn taking time in seconds", order = 1)]
+    [Space(-10, order = 2)]
+    [Header("Longer time leads to better evaluations for Greedy and MCTS", order = 3)]
+    public float TimeAllottedPerTurn = 1f;
     
     void Start(){
         return;
@@ -43,29 +49,46 @@ public class GameEvaluation : MonoBehaviour
         PlayGame(game, player1, player2);
     }
 
-    public int PlayGame(Game game, BaseAgent player1, BaseAgent player2, int turnLimit = 100){
+    public IEnumerator PlayGame(Game game, BaseAgent player1, BaseAgent player2, int turnLimit = 100){
         int turn = 0;
         //? Always reset the game before playing.
         game.ResetState();
-
+        
+        var time = Stopwatch.StartNew();
+        
         // game.PrintBoard();
         while(turn < turnLimit){
-            if(!player1.TakeTurn(game))
+            if(!player1.TakeTurn(game, TimeAllottedPerTurn))
                 break;
             if(game.endStatus > 0)
                 break;
             // game.PrintBoard();
             turn++;
-            if(!player2.TakeTurn(game))
+            
+            //Take a break when we reach 16ms (approx. 1 frame)
+            if (time.ElapsedMilliseconds > 16)
+            {
+                time.Restart();
+                yield return 0;
+            }
+            
+            if(!player2.TakeTurn(game, TimeAllottedPerTurn))
                 break;
             if(game.endStatus > 0)
                 break;
             // game.PrintBoard();
             turn++;
+            
+            //Take a break when we reach 16ms (approx. 1 frame)
+            if (time.ElapsedMilliseconds > 16)
+            {
+                time.Restart();
+                yield return 0;
+            }
         }
 
         // game.PrintBoard();
-
+        
         if(turn >= turnLimit){
             // Debug.Log("Game tied: turn limit exceeded.");
         }
@@ -73,19 +96,17 @@ public class GameEvaluation : MonoBehaviour
             switch(game.endStatus){
                 case 1:
                     // Debug.Log("Player 1 wins (in "+turn+" turns)");
-                    return 1;
                     break;
                 case 2:
                     // Debug.Log("Player 2 wins (in "+turn+" turns)");
-                    return 2;
                     break;
                 case 3:
                     // Debug.Log("Game tied (in "+turn+" turns)");
-                    return 3;
                     break;
             }
         }
-        return 0;
+        
+        yield return 0;
     }
 
     public static GameEvaluation instance;
