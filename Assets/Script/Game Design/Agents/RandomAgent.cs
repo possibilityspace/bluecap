@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 public class RandomAgent : BaseAgent
@@ -24,8 +25,22 @@ public class RandomAgent : BaseAgent
     //we give up.
     int cutoff = 1000;
 
-    public override bool TakeTurn(Game g){
-        for(int i=0; i<cutoff; i++){
+    /// <summary>
+    /// Take a turn, but use no more than the allotted time limit.
+    /// </summary>
+    /// <param name="g">The game to play</param>
+    /// <param name="timeLimit">Time limit in seconds</param>
+    /// <returns>Returns whether we managed to take a turn or not.</returns>
+    public override bool TakeTurn(Game g, float timeLimit = 1f){
+        //NOTE: use timeLimit in addition to cutoff, if TapAction takes a lot of time for some reason.
+        var timer = Stopwatch.StartNew();
+        var timeLimitInMillis = timeLimit * 1000f;
+        
+        for(int i=0; i<cutoff; i++)
+        {
+            //Check if the time is up!
+            if (timer.ElapsedMilliseconds > timeLimitInMillis) break;
+            
             if(g.TapAction(Random.Range(0, g.boardWidth), Random.Range(0, g.boardHeight))){
                 return true;
             }

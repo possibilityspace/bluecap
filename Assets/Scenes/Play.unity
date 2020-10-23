@@ -704,6 +704,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9fcccf26748374b5ba49b8c8dd27af33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  TimeAllottedPerTurn: 1
 --- !u!4 &1045119284
 Transform:
   m_ObjectHideFlags: 0
@@ -1065,7 +1066,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 4d35b7a59a1a7487aa592fb0ad723ac2, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 1531ee52aa84a45029c4517fd6c5a5c1, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1925,7 +1926,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 1531ee52aa84a45029c4517fd6c5a5c1, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 4d35b7a59a1a7487aa592fb0ad723ac2, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2074,7 +2075,7 @@ MonoBehaviour:
     spaceCount: 2
     wordCount: 3
     linkCount: 0
-    lineCount: 1
+    lineCount: 2
     pageCount: 1
     materialCount: 1
   m_isUsingLegacyAnimationComponent: 0

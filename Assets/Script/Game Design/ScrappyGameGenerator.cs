@@ -1,6 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Diagnostics;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
+using Random = UnityEngine.Random;
 
 public class ScrappyGameGenerator : MonoBehaviour
 {
@@ -37,22 +40,61 @@ public class ScrappyGameGenerator : MonoBehaviour
     public TMPro.TextMeshProUGUI timeRemainingText;
     public UnityEngine.UI.Image progressBar;
 
+    [Header("Best Rules")]
+    [TextArea]
+    public string bestRulesCode;
+    public bool gameTestingFinished;
+    
+    [Header("Evaluation Time")]
+    public float totalTimeSpent;
+    public float estimatedTotalTime;
+
+    public float estimatedTimeLeft;
+
     string goodScoreColor = "<#33aa33>";
     string averageScoreColor = "<#E57517>";
     string badScoreColor = "<#CF1200>";
     string regularText = "<#3D2607>";
 
     void Start(){
-        StartCoroutine("RandomlyTestGames");
+        StartCoroutine(RandomlyTestGames());
+        StartCoroutine(EstimatedTimeUpdater());
     }
 
+
+   
+    
+    public IEnumerator EstimatedTimeUpdater()
+    {
+        var timer = Stopwatch.StartNew();
+        while (!gameTestingFinished)
+        {
+            var t = TimeSpan.FromSeconds(estimatedTimeLeft);
+
+            timeRemainingText.text = "Estimated time remaining: "+string.Format("{0:D2}h:{1:D2}m:{2:D2}s", 
+                t.Hours, 
+                t.Minutes, 
+                t.Seconds);
+
+            yield return 0;
+
+            //Remove the elapsed time since we last updated from estimatedTimeLeft.
+            estimatedTimeLeft -= timer.ElapsedMilliseconds / 1000f;
+            timer.Restart();
+        }
+        
+        yield return 0;
+    }
+    
     public IEnumerator RandomlyTestGames(){
+        //Overestimate initial evaluation time as: (100 turns per game) * (max time per turn) * (number of games to test)
+        estimatedTimeLeft = 100 * GameEvaluation.instance.TimeAllottedPerTurn * numberOfGamesToTest;
+        
         float bestScore = float.MinValue;
         Game bestGame = null;
 
-        float averageTimeTaken = 0;
-        float sumOfRunTimes = 0;
-
+        var timer = Stopwatch.StartNew();
+        
         for(int g=0; g<numberOfGamesToTest; g++){
             if(interfaceEnabled){
                 progressBarText.text = "Evaluating Game "+g+"/"+numberOfGamesToTest;
@@ -62,19 +104,24 @@ public class ScrappyGameGenerator : MonoBehaviour
             yield return 0;
 
             Game game = GameGeneration.instance.GenerateRandomGame();
+            
+            //NOTE MJ: Don't think you need to StartCoroutine: "yield return ScoreGame(game);" should do.
+            yield return ScoreGame(game);
 
-            float timeTaken = Time.realtimeSinceStartup;
-            yield return StartCoroutine(ScoreGame(game));
-            timeTaken = Time.realtimeSinceStartup - timeTaken;  
+            //NOTE: use StopWatch instead of Unity Time, because that is Time since frame start, not actual time.
+            float timeTaken = timer.ElapsedMilliseconds / 1000f;
+            timer.Restart();
 
             //This is a pretty bad estimate, because some games are a lot harder to evaluate than others.
             //In particular, in search-based approaches (like computational evolution) will find better
             //games as the search goes on, which means your system will get slower as the generation goes 
             //on. That doesn't happen here because our approach is completely random.
-            sumOfRunTimes += timeTaken;
-            averageTimeTaken = sumOfRunTimes/(float)(g+1);
+            totalTimeSpent += timeTaken;
+            var averageTimeTaken = totalTimeSpent/(g+1);
+            estimatedTotalTime = averageTimeTaken * numberOfGamesToTest;
+            estimatedTimeLeft = estimatedTotalTime - totalTimeSpent;
             
-            System.TimeSpan t = System.TimeSpan.FromSeconds(averageTimeTaken * (numberOfGamesToTest-(g+1)));
+            var t = TimeSpan.FromSeconds(estimatedTimeLeft);
 
             timeRemainingText.text = "Estimated time remaining: "+string.Format("{0:D2}h:{1:D2}m:{2:D2}s", 
                 t.Hours, 
@@ -84,7 +131,8 @@ public class ScrappyGameGenerator : MonoBehaviour
             if(game.evaluatedScore > bestScore){
                 bestGame = game;
                 bestScore = game.evaluatedScore;
-
+                bestRulesCode = game.GameToCode();
+                
                 if(interfaceEnabled){
                     bestScoresText.text = 
                     "First Play Bias: "+ToScore(playerBiasScore)+"\n"+
@@ -106,8 +154,13 @@ public class ScrappyGameGenerator : MonoBehaviour
             progressBarText.text = "Generation Process Complete!";
         }
 
+        gameTestingFinished = true;
         // Debug.Log("Best game score: "+bestScore);
-        bestGame.PrintGame();      
+        Debug.Log("Finished evaluating games, best game rules found:\n" + 
+                  bestGame.GameToString()+ 
+                  "\n"+
+                  "Copy this Code into the Play scene to test it yourself: \n"+ 
+                  bestGame.GameToCode());
     }
 
     public string ToScore(float val){
@@ -190,6 +243,7 @@ public class ScrappyGameGenerator : MonoBehaviour
             currentRulesText.text = game.GameToString();
             scoresSoFar = "First Play Bias: "+ToScore(playerBiasScore)+"\n";
             currentScoresText.text = scoresSoFar;
+            yield return 0;
         }
 
         //? Random vs. Random: These games can go either way, the only thing we're interested
@@ -202,9 +256,11 @@ public class ScrappyGameGenerator : MonoBehaviour
             if(interfaceEnabled)
                 currentScoresText.text = "First Play Bias: Playing ("+i+"/"+randomRandomMatches+")\n";
 
-            int res = GameEvaluation.instance.PlayGame(game, randomAgent1, randomAgent2);
-            if(res == 1) firstWon++;
-            if(res == 2) secondWon++;
+            //NOTE MJ: Playing the games could be coroutines, so they don't block UI.
+            //res is redundant game.endStatus already has info.
+            yield return GameEvaluation.instance.PlayGame(game, randomAgent1, randomAgent2);
+            if(game.endStatus == 1) firstWon++;
+            if(game.endStatus == 2) secondWon++;
             //? Yield after each playout - we could yield more frequently, this is OK though.
             yield return 0;
         }
@@ -214,6 +270,7 @@ public class ScrappyGameGenerator : MonoBehaviour
         if(interfaceEnabled){
             scoresSoFar = "First Play Bias: "+ToScore(playerBiasScore)+"\n";
             currentScoresText.text = scoresSoFar;
+            yield return 0;
         }
 
         //? We could also add in a measure of 'decisiveness' - i.e. games shouldn't end in draws.
@@ -223,15 +280,20 @@ public class ScrappyGameGenerator : MonoBehaviour
         //? win more than random. Score is proportion to the number of games greedy won or tied.
         int randomAgentWon = 0;
         for(int i=0; i<greedyRandomMatches; i++){
-            if(interfaceEnabled)
+            if (interfaceEnabled)
+            {
                 currentScoresText.text = scoresSoFar+"Simple Beats Random: Playing ("+i+"/"+greedyRandomMatches+")\n";
+                yield return 0;
+            }
 
             //? Small detail: note that we swap who plays first, to compensate
             //? for first-player advantage
             RandomAgent randomAgent = new RandomAgent(1+(i%2));
             GreedyAgent greedyAgent = new GreedyAgent(2-(i%2));
-            int res = GameEvaluation.instance.PlayGame(game, randomAgent, greedyAgent);
-            if(res == 1+(i%2)){
+            
+            //NOTE MJ: Playing the games could be coroutines, so they don't block UI. res could be an out parameter.
+            yield return GameEvaluation.instance.PlayGame(game, randomAgent, greedyAgent);
+            if(game.endStatus == 1+(i%2)){
                 randomAgentWon++;
             }
             yield return 0;
@@ -242,6 +304,7 @@ public class ScrappyGameGenerator : MonoBehaviour
         if(interfaceEnabled){
             scoresSoFar += "Simple Beats Random: "+ToScore(greedIsGoodScore)+"\n";
             currentScoresText.text = scoresSoFar;
+            yield return 0;
         }
 
         //? Greedy vs. MCTS: We know that greedy players will avoid causing their own loss, and
@@ -252,13 +315,18 @@ public class ScrappyGameGenerator : MonoBehaviour
         int mctsAgentWon = 0;
 
         for(int i=0; i<greedySkilledMatches; i++){
-            if(interfaceEnabled)
+            if (interfaceEnabled)
+            {
                 currentScoresText.text = scoresSoFar+"Clever Beats Simple: Playing ("+i+"/"+greedySkilledMatches+")\n";
+                yield return 0;
+            }
 
             MCTSAgent skilledAgent = new MCTSAgent(1+(i%2));
             GreedyAgent greedyAgent = new GreedyAgent(2-(i%2));
-            int res = GameEvaluation.instance.PlayGame(game, skilledAgent, greedyAgent);
-            if(res == 1+(i%2)){
+            
+            //NOTE MJ: Playing the games could be coroutines, so they don't block UI. res could be an out parameter.
+            yield return GameEvaluation.instance.PlayGame(game, skilledAgent, greedyAgent);
+            if(game.endStatus == 1+(i%2)){
                 mctsAgentWon++;
             }
             yield return 0;
@@ -269,6 +337,7 @@ public class ScrappyGameGenerator : MonoBehaviour
         if(interfaceEnabled){
             scoresSoFar += "Clever Beats Simple: "+ToScore(skillIsBetterScore)+"\n";
             currentScoresText.text = scoresSoFar;
+            yield return 0;
         }
 
         //? Finally, MCTS vs MCTS. If we wanted more depth, we could do two version of this, 
@@ -282,14 +351,18 @@ public class ScrappyGameGenerator : MonoBehaviour
         MCTSAgent skilledAgent2 = new MCTSAgent(2);
         for(int i=0; i<skilledMirrorMatches; i++){
             if(interfaceEnabled)
+            {
                 currentScoresText.text = scoresSoFar+
-                    "Avoid Draws: Playing ("+i+"/"+skilledMirrorMatches+")\n"+
-                    "High Skill Mirror Matchup: Playing ("+i+"/"+skilledMirrorMatches+")\n";
+                                       "Avoid Draws: Playing ("+i+"/"+skilledMirrorMatches+")\n"+
+                                       "High Skill Mirror Matchup: Playing ("+i+"/"+skilledMirrorMatches+")\n";
+                yield return 0;
+            }
 
-            int res = GameEvaluation.instance.PlayGame(game, skilledAgent1, skilledAgent2);
-            if(res == 1) firstPlayerWon++;
-            if(res == 2) secondPlayerWon++;
-            if(res == 3 || res == 0) drawnGames++; 
+            //NOTE MJ: Playing the games could be coroutines, so they don't block UI. res could be an out parameter.
+            yield return GameEvaluation.instance.PlayGame(game, skilledAgent1, skilledAgent2);
+            if(game.endStatus == 1) firstPlayerWon++;
+            if(game.endStatus == 2) secondPlayerWon++;
+            if(game.endStatus == 3 || game.endStatus == 0) drawnGames++; 
             yield return 0;
         }
 
@@ -299,6 +372,7 @@ public class ScrappyGameGenerator : MonoBehaviour
         if(interfaceEnabled){
             currentScoresText.text = scoresSoFar + "Avoid Draws: "+ToScore(drawsAreBadScore)+"\n"+
             "High Skill Mirror Matchup: "+ToScore(highSkillBalanceScore)+"\n";
+            yield return 0;
         }
 
         //? Now we can add up the scores and return them. If we wanted we could balance them so

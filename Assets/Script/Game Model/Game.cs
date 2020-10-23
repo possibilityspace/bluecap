@@ -278,7 +278,8 @@ public class Game
 
     //Useful for testing and automated play. Note that each condition and effect has its own little toString
     //so each rule can explain itself. This isn't always possible, but our test system is simple enough to work.
-    public void PrintGame(){
+    public void PrintGame()
+    {
         Debug.Log(GameToString());
     }
 
@@ -307,6 +308,7 @@ public class Game
         game += "WIN "+winCondition.ToCode()+"\n";
         if(loseCondition != null)
             game += "LOSE "+loseCondition.ToCode()+"\n";
+
         return game;
     }
 
@@ -339,6 +341,9 @@ public class Game
         //This is an example of what I mean by the way - I'm not checking here or throwing errors, I just assume it's fine.
         Game game = new Game(int.Parse(gameDim[1]), int.Parse(gameDim[2]));
         for(int i=1; i<lines.Length; i++){
+            //Skip empty lines, while parsing!
+            if(string.IsNullOrWhiteSpace(lines[i])) continue;
+            
             string[] line = lines[i].Split(' ');
             if(line[0] == "WIN"){
                 game.winCondition = ParseCondition(line);
