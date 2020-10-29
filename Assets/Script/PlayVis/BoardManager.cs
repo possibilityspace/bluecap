@@ -12,10 +12,14 @@ public class BoardManager : MonoBehaviour
      * It's a little tangled, because it's quite a centrally important class.
     */
 
-    public enum AGENT_TYPE {MCTS, Greedy, Random};
+    public enum AGENT_TYPE {MCTS, Conservative, Greedy, Random};
 
     [Header("AI")]
     public bool aiOpponent = false;
+    [Header("Allotted AI turn taking time in seconds", order = 1)]
+    [Space(-10, order = 2)]
+    [Header("Longer time leads to better evaluations for Greedy and MCTS", order = 3)]
+    public float TimeAllottedPerTurn = 1f;
     [Header("AI Versus Mode")]
     public bool aiVersus = false;
     public AGENT_TYPE agentOne;
@@ -95,11 +99,13 @@ LOSE MATCH LINE 3";
         player2Text.color = playerTwoColor;
         player2Image.color = playerTwoColor;
 
-        if(!aiVersus && player1Text != null){
+        if (rulesText != null)
+        {
             //Setup the little sidebar user interface bit
-            rulesText.text = game.GameToString();
+            rulesText.text = game.GameToString();    
         }
-        else if(agent1Text != null){
+        
+        if(aiVersus && agent1Text != null && agent2Text != null){
             //If it's an AI game, set up the little labels
             agent1Text.text = agentOne.ToString()+" Agent";
             agent2Text.text = agentTwo.ToString()+" Agent";
@@ -140,6 +146,8 @@ LOSE MATCH LINE 3";
                     botPlayer1 = new RandomAgent(1); break;
                 case AGENT_TYPE.MCTS:
                     botPlayer1 = new MCTSAgent(1); break;
+                case AGENT_TYPE.Conservative:
+                    botPlayer1 = new MCTSAgent(1){rolloutLength = 5}; break;
             }
             switch(agentTwo){
                 case AGENT_TYPE.Greedy:
@@ -148,9 +156,11 @@ LOSE MATCH LINE 3";
                     botPlayer2 = new RandomAgent(2); break;
                 case AGENT_TYPE.MCTS:
                     botPlayer2 = new MCTSAgent(2); break;
+                case AGENT_TYPE.Conservative:
+                    botPlayer2 = new MCTSAgent(2){rolloutLength = 5}; break;
             }
 
-            StartCoroutine("VersusMode");
+            StartCoroutine(VersusMode());
         }
     }
     
@@ -162,13 +172,13 @@ LOSE MATCH LINE 3";
         //No humans allowed
         allowInteraction = false;
         while(true){
-            botPlayer1.TakeTurn(currentGame);
+            botPlayer1.TakeTurn(currentGame, TimeAllottedPerTurn);
             yield return new WaitForSeconds(timeBetweenActions);
             
             if(currentGame.endStatus != 0)
                 break;
 
-            botPlayer2.TakeTurn(currentGame);
+            botPlayer2.TakeTurn(currentGame, TimeAllottedPerTurn);
             yield return new WaitForSeconds(timeBetweenActions);
 
             if(currentGame.endStatus != 0)
@@ -203,7 +213,7 @@ LOSE MATCH LINE 3";
         //https://twitter.com/BlendoGames/status/1105587512297185280
         yield return new WaitForSeconds(0.3f);
 
-        npcPlayer.TakeTurn(currentGame);
+        npcPlayer.TakeTurn(currentGame, TimeAllottedPerTurn);
         if(currentGame.endStatus != 0){
             SetEndState();
         }
@@ -224,6 +234,11 @@ LOSE MATCH LINE 3";
                 Destroy(pieces[i,j].gameObject);
                 pieces[i,j] = null;
             }
+        }
+
+        if (aiVersus)
+        {
+            StartCoroutine(VersusMode());
         }
     }
 
@@ -288,7 +303,10 @@ LOSE MATCH LINE 3";
         Debug.Assert(pieces[x,y] != null);
 
         PlayerPiece p = pieces[x,y];
-        p.transform.DOPunchScale(new Vector3(0.5f, 0.5f, 1f), 0.2f);
+
+        var punchTween = p.transform.DOPunchScale(new Vector3(0.5f, 0.5f, 1f), 0.2f);
+        // //After the punch make sure it resets to the original scale.
+        punchTween.OnComplete(() => p.transform.DOScale(Vector3.one, 0.1f));
 
         if(newPlayerCode == 0){
             p.mainSprite.color = playerOneColor;
