@@ -181,9 +181,6 @@ public class Game
                         }
                         if(fullMatch)
                         {
-                            //! We can skip j ahead by the match count. 
-                            j += matchList.Count;
-                            
                             //! If we only need to test the existence of a line (i.e. tic-tac-toe) we
                             //! can return as soon as we find anything.
                             if(checkOnly) return matchList;

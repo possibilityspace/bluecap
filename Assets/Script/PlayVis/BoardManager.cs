@@ -177,12 +177,14 @@ LOSE MATCH LINE 3";
         while(true){
             botPlayer1.TakeTurn(currentGame, TimeAllottedPerTurn);
             yield return new WaitForSeconds(timeBetweenActions);
-            
+            yield return new WaitUntil(()=> !animatingAction);
+
             if(currentGame.endStatus != 0)
                 break;
 
             botPlayer2.TakeTurn(currentGame, TimeAllottedPerTurn);
             yield return new WaitForSeconds(timeBetweenActions);
+            yield return new WaitUntil(()=> !animatingAction);
 
             if(currentGame.endStatus != 0)
                 break;
@@ -224,20 +226,33 @@ LOSE MATCH LINE 3";
         allowInteraction = true;
     }
 
-    
+    private bool animatingAction;
+    private Queue<Action> actionQueue = new Queue<Action>();
     
     IEnumerator PauseForAnimation()
     {
         allowInteraction = false;
         
+        //First action will usually be the AddPiece action, so we'll pause for half a second after that. 
+        var firstAction = true;
+        
         do
         {
             var action = actionQueue.Dequeue();
             action.Invoke();
-            
-            yield return new WaitForSeconds(0.2f);
+
+            if (firstAction)
+            {
+                firstAction = false;
+                yield return new WaitForSeconds(0.5f);
+            }
+            else
+            {
+                yield return new WaitForSeconds(0.3f);    
+            }
         } while (actionQueue.Count > 0);
 
+        yield return new WaitForSeconds(0.3f);
         animatingAction = false;
         allowInteraction = true;
     }
@@ -352,9 +367,6 @@ LOSE MATCH LINE 3";
         p.transform.DOScale(Vector3.zero, 0.25f).OnComplete(() => Destroy(p.gameObject));
     }
 
-    private bool animatingAction;
-    private Queue<Action> actionQueue = new Queue<Action>();
-    
     public void QueueFlipPiece(int x, int y, int newPlayerCode)
     {
         actionQueue.Enqueue(()=>FlipPiece(x,y,newPlayerCode));
@@ -371,19 +383,22 @@ LOSE MATCH LINE 3";
 
         PlayerPiece p = pieces[x,y];
 
-        var punchTween = p.transform.DOPunchScale(new Vector3(0.5f, 0.5f, 1f), 0.2f);
+        var punchTween = p.transform.DOScale(new Vector3(0, 1.5f, 1f), 0.15f);
         // //After the punch make sure it resets to the original scale.
-        punchTween.OnComplete(() => p.transform.DOScale(Vector3.one, 0.1f));
-
-        if(newPlayerCode == 0){
-            p.mainSprite.color = playerOneColor;
-            p.outlineSprite.color = playerOneAccent;
-        }
-        else{
-            p.mainSprite.color = playerTwoColor;
-            p.outlineSprite.color = playerTwoAccent;
-        }
-        p.SetShape(newPlayerCode);
+        punchTween.OnComplete(() =>
+        {
+            if(newPlayerCode == 0){
+                p.mainSprite.color = playerOneColor;
+                p.outlineSprite.color = playerOneAccent;
+            }
+            else{
+                p.mainSprite.color = playerTwoColor;
+                p.outlineSprite.color = playerTwoAccent;
+            }
+            p.SetShape(newPlayerCode);
+            
+            p.transform.DOScale(Vector3.one, 0.15f);
+        });
     }
 
 
