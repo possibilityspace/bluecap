@@ -2,7 +2,9 @@
 
 Bluecap is a simple automated game designer, built in Unity. It includes a little bit of everything to help get you started making AI systems that design games.
 
-Bluecap was designed to pair with my 2020 tutorial, "Getting Started in Automated Game Design", which I gave at the IEEE Conference on Games. You can watch the tutorial on YouTube here: <link coming soon>
+Bluecap was designed to pair with my 2020 tutorial, "Getting Started in Automated Game Design", which I gave at the IEEE Conference on Games. You can watch the tutorial on YouTube here: https://www.youtube.com/watch?v=dZv-vRrnHDA
+
+Bluecap has also benefitted massively from the input of Mads Johansen (pyjamads) who made many fixes, polished several things, and added new design ideas.
 
 ## Getting Started
 
