@@ -88,7 +88,7 @@ public class Game
             state.Set(x, y, Player.CURRENT);
             //! If we're in interactive mode, we notify the board that we've placed a piece
             if(interactiveMode){
-                playableGame.AddPiece(x, y, CurrentPlayer()-1);
+                playableGame.QueueAddPiece(x, y, CurrentPlayer()-1);
             }
             //! Automatically end the turn after a player has placed a piece
             //! Again, if you wanted to allow multiple actions, you'd change this.
@@ -293,7 +293,7 @@ public class Game
         state.Set(tx, ty, state.Value(fx, fy));
         state.Set(fx, fy, 0);
         if(interactiveMode){
-            playableGame.MovePiece(fx, fy, tx, ty);
+            playableGame.QueueMovePiece(fx, fy, tx, ty);
         }
     }
 
@@ -302,14 +302,14 @@ public class Game
             return;
         state.Set(x, y, (state.Value(x, y)%2)+1);
         if(interactiveMode){
-            playableGame.FlipPiece(x, y, state.Value(x, y)-1);
+            playableGame.QueueFlipPiece(x, y, state.Value(x, y)-1);
         }
     }
 
     public void DeletePiece(int x, int y){
         state.Set(x, y, 0);
         if(interactiveMode){
-            playableGame.DeletePiece(x, y);
+            playableGame.QueueDeletePiece(x, y);
         }
     }
 

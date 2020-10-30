@@ -1,5 +1,8 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices.ComTypes;
+using System.Xml.Schema;
 using UnityEngine;
 using DG.Tweening;
 
@@ -147,7 +150,7 @@ LOSE MATCH LINE 3";
                 case AGENT_TYPE.MCTS:
                     botPlayer1 = new MCTSAgent(1); break;
                 case AGENT_TYPE.Conservative:
-                    botPlayer1 = new MCTSAgent(1){rolloutLength = 5}; break;
+                    botPlayer1 = new MCTSAgent(1){rolloutLength = 2}; break;
             }
             switch(agentTwo){
                 case AGENT_TYPE.Greedy:
@@ -157,7 +160,7 @@ LOSE MATCH LINE 3";
                 case AGENT_TYPE.MCTS:
                     botPlayer2 = new MCTSAgent(2); break;
                 case AGENT_TYPE.Conservative:
-                    botPlayer2 = new MCTSAgent(2){rolloutLength = 5}; break;
+                    botPlayer2 = new MCTSAgent(2){rolloutLength = 2}; break;
             }
 
             StartCoroutine(VersusMode());
@@ -219,7 +222,24 @@ LOSE MATCH LINE 3";
         }
 
         allowInteraction = true;
+    }
+
+    
+    
+    IEnumerator PauseForAnimation()
+    {
+        allowInteraction = false;
         
+        do
+        {
+            var action = actionQueue.Dequeue();
+            action.Invoke();
+            
+            yield return new WaitForSeconds(0.2f);
+        } while (actionQueue.Count > 0);
+
+        animatingAction = false;
+        allowInteraction = true;
     }
     
     public void ResetGame(){
@@ -259,6 +279,17 @@ LOSE MATCH LINE 3";
         }
     }
 
+    public void QueueAddPiece(int x, int y, int player)
+    {
+        actionQueue.Enqueue(()=>AddPiece(x,y, player));
+        
+        if (!animatingAction)
+        {
+            animatingAction = true;
+            StartCoroutine(PauseForAnimation());
+        }
+    }
+    
     public void AddPiece(int x, int y, int player){
         Debug.Log("adding: "+x+","+y);
         PlayerPiece p = Instantiate(templatePlayerPiece);
@@ -279,6 +310,17 @@ LOSE MATCH LINE 3";
         //GFEE.Instance.TriggerCustomEvent("AddPiece"+Player.id, gameObject, pos, direction);
     }
 
+    public void QueueMovePiece(int fx, int fy, int tx, int ty)
+    {
+        actionQueue.Enqueue(()=>MovePiece(fx,fy, tx, ty));
+        
+        if (!animatingAction)
+        {
+            animatingAction = true;
+            StartCoroutine(PauseForAnimation());
+        }
+    }
+    
     //! Board update stuff
     public void MovePiece(int fx, int fy, int tx, int ty){
         Debug.Assert(pieces[fx,fy] != null);
@@ -287,6 +329,17 @@ LOSE MATCH LINE 3";
         pieces[fx,fy].transform.DOMove(new Vector3(tx, ty, 0), 0.3f);
         pieces[tx,ty] = pieces[fx,fy];
         pieces[fx,fy] = null;
+    }
+    
+    public void QueueDeletePiece(int x, int y)
+    {
+        actionQueue.Enqueue(()=>DeletePiece(x,y));
+        
+        if (!animatingAction)
+        {
+            animatingAction = true;
+            StartCoroutine(PauseForAnimation());
+        }
     }
 
     public void DeletePiece(int x, int y){
@@ -299,6 +352,20 @@ LOSE MATCH LINE 3";
         p.transform.DOScale(Vector3.zero, 0.25f).OnComplete(() => Destroy(p.gameObject));
     }
 
+    private bool animatingAction;
+    private Queue<Action> actionQueue = new Queue<Action>();
+    
+    public void QueueFlipPiece(int x, int y, int newPlayerCode)
+    {
+        actionQueue.Enqueue(()=>FlipPiece(x,y,newPlayerCode));
+        
+        if (!animatingAction)
+        {
+            animatingAction = true;
+            StartCoroutine(PauseForAnimation());
+        }
+    }
+    
     public void FlipPiece(int x, int y, int newPlayerCode){
         Debug.Assert(pieces[x,y] != null);
 
