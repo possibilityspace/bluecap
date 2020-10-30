@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 /*
@@ -12,7 +13,7 @@ using UnityEngine;
 public enum Heading{UP, RIGHT, DOWN, LEFT};
 public enum Direction{LINE, ROW, COL, CARDINAL};
 public enum Player{CURRENT, OPPONENT, ANY};
-public enum TriggeredEffect {DELETE, FLIP, FALL};
+public enum TriggeredEffect {DELETE, FLIP, CASCADE};
 
 //This is a handy little class I make so I can quickly bundle two integers together in one object.
 //There's probably a nicer way of doing this in C#, this is just a quick solution.
@@ -21,6 +22,16 @@ public struct Point{
     public int x; public int y;
     public Point(int _x, int _y){
         this.x = _x; this.y = _y;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (obj is Point p)
+        {
+            return p.x == x && p.y == y;
+        }
+        
+        return false;
     }
 }
 
@@ -77,7 +88,7 @@ public class Game
             state.Set(x, y, Player.CURRENT);
             //! If we're in interactive mode, we notify the board that we've placed a piece
             if(interactiveMode){
-                playableGame.AddPiece(x, y, CurrentPlayer()-1);
+                playableGame.QueueAddPiece(x, y, CurrentPlayer()-1);
             }
             //! Automatically end the turn after a player has placed a piece
             //! Again, if you wanted to allow multiple actions, you'd change this.
@@ -104,15 +115,15 @@ public class Game
         if(winCondition.Check(this, Player.CURRENT)){
             endStatus = state.GetPlayerValue(Player.CURRENT);
         }
-        // 2. Has the other player lost?
+        // 2. Has the other player won?
         if(winCondition.Check(this, Player.OPPONENT)){
             if(endStatus == state.GetPlayerValue(Player.CURRENT))
                 endStatus = END_STATUS_DRAW;
             else
-                endStatus = state.GetPlayerValue(Player.CURRENT);
+                endStatus = state.GetPlayerValue(Player.OPPONENT);
         }
         //! Note that this means that someone can win and lose in the same turn, and we
-        //! count is as a win (because we only check for losing if endstatus == 0).
+        //! count it as a win (because we only check for losing if endStatus == 0).
         //! You might prefer to have losing take precedence over winning.
         // 3. If there are loss conditions, has the other player lost?
         if(endStatus == 0 && loseCondition != null){
@@ -143,9 +154,10 @@ public class Game
     * lines of pieces.
     */
 
-    public List<Point> FindLines(Direction direction, int length, Player p, bool checkOnly = false){
+    public List<Point> FindLines(Direction direction, int length, Player p, bool checkOnly = false, bool checkFromLastPos = false){
         int cValue = 0;
         List<Point> matchList = new List<Point>();
+        List<Point> results = new List<Point>();
         for(int i=0; i<boardWidth; i++){
             for(int j=0; j<boardHeight; j++){
                 cValue = state.Value(i, j);
@@ -155,75 +167,122 @@ public class Game
                         && (direction == Direction.COL || direction == Direction.LINE || direction == Direction.CARDINAL)){
                         //Loop from 1 since we know board[i,j+0] == cValue already
                         bool fullMatch = true;
-                        for(int l=1; l<length; l++){
+                        matchList.Add(new Point(i, j));
+                        
+                        for(int l=1; l<boardHeight - j; l++)
+                        {
                             if(state.Value(i, j+l) != cValue){
-                                fullMatch = false;
+                                fullMatch = l >= length;
+                                
                                 break;
                             }
+
+                            matchList.Add(new Point(i, j+l));
                         }
-                        if(fullMatch){
-                            for(int l=0; l<length; l++){
-                                matchList.Add(new Point(i, j+l));
-                            }
+                        if(fullMatch)
+                        {
                             //! If we only need to test the existence of a line (i.e. tic-tac-toe) we
                             //! can return as soon as we find anything.
                             if(checkOnly) return matchList;
+                            
+                            CheckAndAddResults(checkFromLastPos, matchList, results);
                         }
+                        
+                        matchList.Clear();
                     }
                     //! Very similar story for horizontal checks
                     if(i <= boardWidth-length 
                         && (direction == Direction.ROW || direction == Direction.LINE || direction == Direction.CARDINAL)){
                         bool fullMatch = true;
-                        for(int l=1; l<length; l++){
+                        matchList.Add(new Point(i, j));
+                        for(int l=1; l<boardWidth-i; l++){
                             if(state.Value(i+l, j) != cValue){
-                                fullMatch = false;
+                                fullMatch = l >= length;
                                 break;
                             }
+                            
+                            matchList.Add(new Point(i+l, j));
                         }
+                        
                         if(fullMatch){
-                            for(int l=0; l<length; l++){
-                                matchList.Add(new Point(i+l, j));
-                            }
+                            //! We can't skip i ahead, because we need to check every column.
+                            
                             if(checkOnly) return matchList;
+                            
+                            CheckAndAddResults(checkFromLastPos, matchList, results);
                         }
+                        
+                        matchList.Clear();
                     }
                     //! And diagonals
                     if(i <= boardWidth-length && j >= length-1
                         && (direction == Direction.LINE)){
                         bool fullMatch = true;
-                        for(int l=1; l<length; l++){
+                        matchList.Add(new Point(i, j));
+                        for(int l=1; l<boardWidth-i && l<j+1; l++){
                             if(state.Value(i+l, j-l) != cValue){
-                                fullMatch = false;
+                                fullMatch = l >= length;
                                 break;
                             }
+                            
+                            matchList.Add(new Point(i+l, j-l));
                         }
                         if(fullMatch){
-                            for(int l=0; l<length; l++){
-                                matchList.Add(new Point(i+l, j-l));
-                            }
                             if(checkOnly) return matchList;
+                            
+                            CheckAndAddResults(checkFromLastPos, matchList, results);
                         }
+                        
+                        matchList.Clear();
                     }
                     if(i <= boardWidth-length && j <= boardHeight-length
                         && (direction == Direction.LINE)){
                         bool fullMatch = true;
-                        for(int l=1; l<length; l++){
+                        matchList.Add(new Point(i, j));
+                        for(int l=1; l<boardWidth-i && l < boardHeight-j; l++){
                             if(state.Value(i+l, j+l) != cValue){
-                                fullMatch = false;
+                                fullMatch = l >= length;
                                 break;
                             }
+                            
+                            matchList.Add(new Point(i+l, j+l));
                         }
                         if(fullMatch){
-                            for(int l=0; l<length; l++){
-                                matchList.Add(new Point(i+l, j+l));
-                            }
                             if(checkOnly) return matchList;
+                            
+                            CheckAndAddResults(checkFromLastPos, matchList, results);
                         }
+                        matchList.Clear();
                     }
                 }
             }
         }
-        return matchList;
+        //Return a distinct list of points, to avoid returning the same point multiple times. 
+        return results.Distinct().ToList();
+    }
+
+    private void CheckAndAddResults(bool checkFromLastPos, List<Point> matchList, List<Point> results)
+    {
+        if (checkFromLastPos)
+        {
+            var containsLastPos = false;
+            foreach (var point in matchList)
+            {
+                if (point.x == state.latestMove.x && 
+                    point.y == state.latestMove.y)
+                {
+                    containsLastPos = true;
+                    break;
+                }
+            }
+
+            if (!containsLastPos)
+            {
+                matchList.Clear();
+            }
+        }
+
+        results.AddRange(matchList);
     }
 
     public void MovePiece(int fx, int fy, int tx, int ty){
@@ -231,7 +290,7 @@ public class Game
         state.Set(tx, ty, state.Value(fx, fy));
         state.Set(fx, fy, 0);
         if(interactiveMode){
-            playableGame.MovePiece(fx, fy, tx, ty);
+            playableGame.QueueMovePiece(fx, fy, tx, ty);
         }
     }
 
@@ -240,14 +299,14 @@ public class Game
             return;
         state.Set(x, y, (state.Value(x, y)%2)+1);
         if(interactiveMode){
-            playableGame.FlipPiece(x, y, state.Value(x, y)-1);
+            playableGame.QueueFlipPiece(x, y, state.Value(x, y)-1);
         }
     }
 
     public void DeletePiece(int x, int y){
         state.Set(x, y, 0);
         if(interactiveMode){
-            playableGame.DeletePiece(x, y);
+            playableGame.QueueDeletePiece(x, y);
         }
     }
 

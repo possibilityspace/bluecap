@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class FallPiecesEffect : Effect
 {
-    
     public Heading fallDirection;
 
     public FallPiecesEffect(Heading h){

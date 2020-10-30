@@ -28,12 +28,14 @@ public class GameState
     public ulong player2 = 0;
     public int currentPlayer = 1;
 
+    public Point latestMove;
     
     public GameState Copy(){
         GameState res = new GameState(width, height);
         res.player1 = this.player1;
         res.player2 = this.player2;
         res.currentPlayer = this.currentPlayer;
+        res.latestMove = this.latestMove;
         return res;
     }
 
@@ -64,6 +66,8 @@ public class GameState
                 player1 |= mask;
             }
         }
+        
+        latestMove = new Point(x,y);
     }
 
     public void Set(int x, int y, int p){
@@ -81,6 +85,8 @@ public class GameState
             player1 &= ~mask;
             player2 &= ~mask;
         }
+        
+        latestMove = new Point(x,y);
     }
 
     public int GetPlayerValue(Player player){

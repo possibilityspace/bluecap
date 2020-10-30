@@ -21,26 +21,29 @@ public class InARowEffect : Effect
     }
 
     public override void Apply(Game g){
-        List<Point> ps = g.FindLines(checkDirection, rowLength, Player.CURRENT);
+        List<Point> ps = g.FindLines(checkDirection, rowLength, Player.CURRENT, false, onTriggerEffect == TriggeredEffect.CASCADE);
 
         //? This is pretty inefficient! It would've been nicer to have a third option, Player.ANY.
         //? If I was building this as a big system I'd definitely refactor it, but I'm going to do 
         //? this tiny hack here in the name of saving time, and keeping the code elsewhere simple.
-        ps.AddRange(g.FindLines(checkDirection, rowLength, Player.OPPONENT));
+        if (onTriggerEffect != TriggeredEffect.CASCADE)
+        {
+            ps.AddRange(g.FindLines(checkDirection, rowLength, Player.OPPONENT));    
+        }
 
         //Now apply the effect to any of the matched pieces
         foreach(Point p in ps){
             if(onTriggerEffect == TriggeredEffect.DELETE){
                 g.DeletePiece(p.x, p.y);
             }
-            else if(onTriggerEffect == TriggeredEffect.FLIP){
+            else if(onTriggerEffect == TriggeredEffect.FLIP || onTriggerEffect == TriggeredEffect.CASCADE){
                 g.FlipPiece(p.x, p.y);
             }
         }
     }
 
     public override string Print(){
-        string exp = "If there are "+rowLength+" pieces of the same type in a sequence ";
+        string exp = "If there are at least "+rowLength+" pieces of the same type in a sequence ";
         switch(checkDirection){
             case Direction.LINE:
                 exp += "(in any direction)";
@@ -65,6 +68,10 @@ public class InARowEffect : Effect
             case TriggeredEffect.FLIP:
                 exp += "the pieces flip to the other player's colour.";
                 break;
+            case TriggeredEffect.CASCADE:
+                exp += "pieces connected to the latest move flip to the other player's colour.";
+                break;
+            
         }
         return exp;
     }

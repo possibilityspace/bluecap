@@ -23,7 +23,23 @@ public class InARowCondition : Condition
     }
 
     public override string Print(){
-        return "if they make a line of "+targetLength+" pieces.";
+        string exp = "If they have at least "+targetLength+" pieces in a sequence ";
+        switch(checkDirection){
+            case Direction.LINE:
+                exp += "(in any direction)";
+                break;
+            case Direction.ROW:
+                exp += "(in a horizontal row only)";
+                break;
+            case Direction.COL:
+                exp += "(in a vertical column only)";
+                break;
+            case Direction.CARDINAL:
+                exp += "(horizontal or vertical lines only)";
+                break;
+        }
+
+        return exp;
     }    
 
 }

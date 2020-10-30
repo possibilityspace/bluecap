@@ -173,7 +173,7 @@ public class MCTSAgent : BaseAgent
     }
 
     //The rollout length can be longer than the area of the board, since some rules remove pieces
-    int rolloutLength = 50;
+    public int rolloutLength = 50;
 
     public float Rollout(Node n, Game g){
         //Couple of ways we could pick random moves. Here we mimic the approach RandomAgent takes, it's
