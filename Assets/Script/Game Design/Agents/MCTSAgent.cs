@@ -101,7 +101,7 @@ public class MCTSAgent : BaseAgent
         Node nextAction = null;
         Node child = root.firstChild;
         while(child != null){
-            Debug.Log("Playing at "+child.ax+","+child.ay+" - sel: "+child.selections+", rew: "+child.score+", avg. rew: "+child.score/child.selections+", ucb: "+UCB(child));
+            //Debug.Log("Playing at "+child.ax+","+child.ay+" - sel: "+child.selections+", rew: "+child.score+", avg. rew: "+child.score/child.selections+", ucb: "+UCB(child));
             if(child.selections > mostVisits){
                 mostVisits = child.selections;
                 nextAction = child;
