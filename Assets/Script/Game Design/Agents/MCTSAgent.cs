@@ -50,9 +50,6 @@ public class MCTSAgent : BaseAgent
         //We never actually use the root node's reward, but all of our child nodes represent actions
         //we are taking, so the reward modifier of their parent must be -1. 
         root.rewardModifier = -1f;
-        
-        //Set the root's selections to 1, so it expands the root immediately without doing a rollout.
-        root.selections = 1;
 
         for(int it=0; it<iterations; it++){
             //? Step zero: reset the game
@@ -70,7 +67,8 @@ public class MCTSAgent : BaseAgent
                 g.TapAction(current.ax, current.ay);
             }
 
-            if(current.selections > 0){
+            //The first time we meet a node we expand it!
+            if(current.isExpanded == false){
                 //? We're now at a node with no children, so we generate all the possible actions
                 GenerateChildren(current, g);
 
@@ -103,7 +101,7 @@ public class MCTSAgent : BaseAgent
         Node nextAction = null;
         Node child = root.firstChild;
         while(child != null){
-            //Debug.Log("Playing at "+child.ax+","+child.ay+" - sel: "+child.selections+", rew: "+child.score+", avg. rew: "+child.score/child.selections+", ucb: "+UCB(child));
+            Debug.Log("Playing at "+child.ax+","+child.ay+" - sel: "+child.selections+", rew: "+child.score+", avg. rew: "+child.score/child.selections+", ucb: "+UCB(child));
             if(child.selections > mostVisits){
                 mostVisits = child.selections;
                 nextAction = child;
@@ -149,6 +147,9 @@ public class MCTSAgent : BaseAgent
 
         Node prev = null;
         int numChildren = 0;
+        
+        //The first time we try to generate children, we mark it as expanded.
+        n.isExpanded = true;
 
         //If the game ended as we selected this node, just return.
         if (g.endStatus > 0) return;
@@ -239,6 +240,7 @@ public class MCTSAgent : BaseAgent
         public int selections;
         public float score;
         public int numChildren;
+        public bool isExpanded;
 
         //The action taken (decomposed into x/y);
         public int ax;
