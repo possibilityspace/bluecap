@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 public class MCTSAgent : BaseAgent
 {
@@ -49,6 +50,9 @@ public class MCTSAgent : BaseAgent
         //We never actually use the root node's reward, but all of our child nodes represent actions
         //we are taking, so the reward modifier of their parent must be -1. 
         root.rewardModifier = -1f;
+        
+        //Set the root's selections to 1, so it expands the root immediately without doing a rollout.
+        root.selections = 1;
 
         for(int it=0; it<iterations; it++){
             //? Step zero: reset the game
@@ -99,7 +103,7 @@ public class MCTSAgent : BaseAgent
         Node nextAction = null;
         Node child = root.firstChild;
         while(child != null){
-            // Debug.Log("Playing at "+child.ax+","+child.ay+" - sel: "+child.selections+", rew: "+child.score+", ucb: "+UCB(child));
+            Debug.Log("Playing at "+child.ax+","+child.ay+" - sel: "+child.selections+", rew: "+child.score+", avg. rew: "+child.score/child.selections+", ucb: "+UCB(child));
             if(child.selections > mostVisits){
                 mostVisits = child.selections;
                 nextAction = child;
@@ -146,6 +150,9 @@ public class MCTSAgent : BaseAgent
         Node prev = null;
         int numChildren = 0;
 
+        //If the game ended as we selected this node, just return.
+        if (g.endStatus > 0) return;
+
         for(int i=0; i<g.boardWidth; i++){
             for(int j=0; j<g.boardHeight; j++){
                 if(g.state.Value(i, j) == 0){
@@ -181,7 +188,7 @@ public class MCTSAgent : BaseAgent
         //I'll try and add this before release - if you're reading this, I totally did not do that.
         int triesPerTurn = 150; bool noMoveFound = false;
         for(int t=0; t<rolloutLength; t++){
-            //Game ended for some reason or otherlc
+            //Game ended for some reason or other
             if(g.endStatus > 0){
                 break;
             }

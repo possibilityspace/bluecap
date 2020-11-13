@@ -205,8 +205,6 @@ public class Game
                         }
                         
                         if(fullMatch){
-                            //! We can't skip i ahead, because we need to check every column.
-                            
                             if(checkOnly) return matchList;
                             
                             CheckAndAddResults(checkFromLastPos, matchList, results);
@@ -261,6 +259,9 @@ public class Game
         return results.Distinct().ToList();
     }
 
+    /// <summary>
+    /// If checkFromLastPos is true, only lines containing the latest move get added.
+    /// </summary>
     private void CheckAndAddResults(bool checkFromLastPos, List<Point> matchList, List<Point> results)
     {
         if (checkFromLastPos)
