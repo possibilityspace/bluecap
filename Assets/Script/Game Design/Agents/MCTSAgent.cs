@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 public class MCTSAgent : BaseAgent
 {
@@ -66,7 +67,8 @@ public class MCTSAgent : BaseAgent
                 g.TapAction(current.ax, current.ay);
             }
 
-            if(current.selections > 0){
+            //The first time we meet a node we expand it!
+            if(current.isExpanded == false){
                 //? We're now at a node with no children, so we generate all the possible actions
                 GenerateChildren(current, g);
 
@@ -99,7 +101,7 @@ public class MCTSAgent : BaseAgent
         Node nextAction = null;
         Node child = root.firstChild;
         while(child != null){
-            // Debug.Log("Playing at "+child.ax+","+child.ay+" - sel: "+child.selections+", rew: "+child.score+", ucb: "+UCB(child));
+            //Debug.Log("Playing at "+child.ax+","+child.ay+" - sel: "+child.selections+", rew: "+child.score+", avg. rew: "+child.score/child.selections+", ucb: "+UCB(child));
             if(child.selections > mostVisits){
                 mostVisits = child.selections;
                 nextAction = child;
@@ -145,6 +147,12 @@ public class MCTSAgent : BaseAgent
 
         Node prev = null;
         int numChildren = 0;
+        
+        //The first time we try to generate children, we mark it as expanded.
+        n.isExpanded = true;
+
+        //If the game ended as we selected this node, just return.
+        if (g.endStatus > 0) return;
 
         for(int i=0; i<g.boardWidth; i++){
             for(int j=0; j<g.boardHeight; j++){
@@ -181,7 +189,7 @@ public class MCTSAgent : BaseAgent
         //I'll try and add this before release - if you're reading this, I totally did not do that.
         int triesPerTurn = 150; bool noMoveFound = false;
         for(int t=0; t<rolloutLength; t++){
-            //Game ended for some reason or otherlc
+            //Game ended for some reason or other
             if(g.endStatus > 0){
                 break;
             }
@@ -232,6 +240,7 @@ public class MCTSAgent : BaseAgent
         public int selections;
         public float score;
         public int numChildren;
+        public bool isExpanded;
 
         //The action taken (decomposed into x/y);
         public int ax;
